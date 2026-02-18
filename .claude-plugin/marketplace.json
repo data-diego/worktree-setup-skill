@@ -1,0 +1,21 @@
+{
+  "name": "worktree-setup-skill",
+  "owner": {
+    "name": "data-diego"
+  },
+  "metadata": {
+    "description": "Git worktree setup with automatic env file copying, env patching, shared service linking, and dependency installation",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "worktree-setup",
+      "description": "Git worktree setup skill",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/wt"
+      ]
+    }
+  ]
+}
