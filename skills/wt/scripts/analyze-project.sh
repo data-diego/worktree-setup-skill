@@ -50,7 +50,7 @@ done
 
 # --- Detect env keys that need patching per worktree ---
 patch_keys=()
-for f in "${envs[@]}"; do
+for f in "${envs[@]+"${envs[@]}"}"; do
   if [ -f "$root/$f" ]; then
     while IFS= read -r key; do
       # Deduplicate
@@ -146,14 +146,14 @@ fi
   echo ""
   echo "# Files to copy from main worktree"
   echo "copy=("
-  for f in "${envs[@]}"; do
+  for f in "${envs[@]+"${envs[@]}"}"; do
     echo "  \"$f\""
   done
   echo ")"
   echo ""
   echo "# Files/dirs to symlink (shared across worktrees, e.g. Docker volumes)"
   echo "link=("
-  for f in "${links[@]}"; do
+  for f in "${links[@]+"${links[@]}"}"; do
     echo "  \"$f\""
   done
   echo ")"
