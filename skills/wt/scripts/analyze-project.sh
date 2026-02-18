@@ -133,10 +133,13 @@ elif [ -f "$root/Procfile" ]; then
   dev="foreman start"
 fi
 
-# --- Check .gitignore for .wtsetup ---
-gitignore_has_wtsetup=0
-if [ -f "$root/.gitignore" ]; then
-  grep -q '\.wtsetup' "$root/.gitignore" 2>/dev/null && gitignore_has_wtsetup=1
+# --- Check global gitignore for .wtsetup ---
+global_ignore=$(git config --global core.excludesfile 2>/dev/null || echo "")
+# Expand ~ if present
+global_ignore="${global_ignore/#\~/$HOME}"
+has_global_ignore=0
+if [ -n "$global_ignore" ] && [ -f "$global_ignore" ]; then
+  grep -q '\.wtsetup' "$global_ignore" 2>/dev/null && has_global_ignore=1
 fi
 
 # --- Write .wtsetup ---
@@ -192,7 +195,11 @@ echo "Created $output"
 echo ""
 cat "$output"
 
-if [ "$gitignore_has_wtsetup" -eq 0 ]; then
+if [ "$has_global_ignore" -eq 0 ]; then
   echo ""
-  echo "⚠  .wtsetup is not in .gitignore — consider adding it."
+  echo "⚠  .wtsetup is not in your global gitignore."
+  echo "   Add it once so it's ignored in every repo:"
+  echo ""
+  echo "   echo '.wtsetup' >> ~/.config/git/ignore"
+  echo "   git config --global core.excludesfile ~/.config/git/ignore"
 fi

@@ -43,14 +43,22 @@ Detects:
 - Lockfiles → `install=""` (supports: bundler, pnpm, npm, yarn, bun, pip, poetry, go, cargo, mix, composer)
 - Test commands → `post_setup=""` (supports: rspec, rails test, pytest, go test, cargo test, mix test, phpunit, pnpm/npm/yarn/bun test)
 - Dev commands (Procfile.dev, bin/dev, Procfile) → commented `dev=""` hint
-- Warns if `.wtsetup` is not in `.gitignore`
+- Warns if `.wtsetup` is not in the global gitignore
 
 After running, show the generated `.wtsetup` and ask the user to review. Common adjustments:
 - Add custom files to `copy=()` (e.g. `config/database.yml`, `.tool-versions`)
 - Add shared dirs to `link=()` (e.g. Docker volumes, large asset dirs)
 - Add/remove keys from `patch_keys=()` depending on what needs isolation per worktree
 - Comment out `post_setup` if tests are slow or not needed every time
-- Add `.wtsetup` to `.gitignore` if the user prefers not to commit it
+
+If `.wtsetup` is not in the user's global gitignore, offer to add it:
+
+```bash
+echo '.wtsetup' >> ~/.config/git/ignore
+git config --global core.excludesfile ~/.config/git/ignore
+```
+
+This is preferred over per-repo `.gitignore` since `.wtsetup` is a local concern like `.env.local`.
 
 ### 2. Install the `wt` shell function
 

@@ -57,6 +57,17 @@ post_setup="bundle exec rspec"  # Baseline test verification
 - **Shell support** — bash, zsh, and fish
 - **Cross-platform** — macOS and Linux (`sed -i` handled for both)
 
+## Global gitignore
+
+`.wtsetup` is a local file (like `.env.local`) — add it to your global gitignore once instead of per-repo:
+
+```bash
+echo '.wtsetup' >> ~/.config/git/ignore
+git config --global core.excludesfile ~/.config/git/ignore
+```
+
+The skill will prompt you to do this if it's not set up.
+
 ## Supported stacks
 
 Ruby/Rails, Node.js, Python, Go, Rust, Elixir, PHP — detected from lockfiles.
