@@ -34,6 +34,7 @@ function wt --description "Create a git worktree with .wtsetup config"
     set -l link
     set -l patch_keys
     set -l install_cmd ""
+    set -l post_setup_cmd ""
     set -l in_copy 0
     set -l in_link 0
     set -l in_patch 0
@@ -51,6 +52,9 @@ function wt --description "Create a git worktree with .wtsetup config"
             set in_copy 0; set in_link 0; set in_patch 0; continue
         else if string match -qr '^install="(.*)"' -- "$trimmed"
             set install_cmd (string match -r '^install="(.*)"' -- "$trimmed")[2]
+            continue
+        else if string match -qr '^post_setup="(.*)"' -- "$trimmed"
+            set post_setup_cmd (string match -r '^post_setup="(.*)"' -- "$trimmed")[2]
             continue
         end
 
@@ -109,7 +113,18 @@ function wt --description "Create a git worktree with .wtsetup config"
     # Run install command
     if test -n "$install_cmd"
         echo "Running: $install_cmd"
-        cd "$dir" && eval $install_cmd
+        (cd "$dir" && eval $install_cmd)
+    end
+
+    # Run post-setup verification (baseline tests)
+    if test -n "$post_setup_cmd"
+        echo ""
+        echo "Verifying baseline..."
+        if cd "$dir" && eval $post_setup_cmd
+            echo "  baseline OK"
+        else
+            echo "  ⚠ baseline check failed — review before starting work"
+        end
     end
 
     echo ""

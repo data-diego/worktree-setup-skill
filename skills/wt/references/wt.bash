@@ -27,6 +27,7 @@ wt() {
   local link=()
   local patch_keys=()
   local install=""
+  local post_setup=""
   source "$main/.wtsetup"
 
   # Sanitize branch for use in DB names, ports, etc.
@@ -48,7 +49,6 @@ wt() {
       [ ! -f "$dir/$f" ] && continue
       for key in "${patch_keys[@]}"; do
         if grep -q "^${key}=" "$dir/$f" 2>/dev/null; then
-          # Append branch slug to the value
           if [[ "$OSTYPE" == "darwin"* ]]; then
             sed -i '' "s|^\(${key}=.*\)|\1_${slug}|" "$dir/$f"
           else
@@ -73,6 +73,17 @@ wt() {
   if [ -n "$install" ]; then
     echo "Running: $install"
     (cd "$dir" && eval "$install")
+  fi
+
+  # Run post-setup verification (baseline tests)
+  if [ -n "$post_setup" ]; then
+    echo ""
+    echo "Verifying baseline..."
+    if (cd "$dir" && eval "$post_setup"); then
+      echo "  baseline OK"
+    else
+      echo "  ⚠ baseline check failed — review before starting work"
+    fi
   fi
 
   echo ""

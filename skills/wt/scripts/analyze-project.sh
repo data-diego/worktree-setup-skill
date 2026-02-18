@@ -49,7 +49,6 @@ for dc in docker-compose.yml docker-compose.yaml compose.yml compose.yaml; do
 done
 
 # --- Detect env keys that need patching per worktree ---
-# Look for DATABASE_URL, REDIS_URL, PORT patterns in env files
 patch_keys=()
 for f in "${envs[@]}"; do
   if [ -f "$root/$f" ]; then
@@ -90,6 +89,40 @@ elif [ -f "$root/composer.lock" ]; then
   install="composer install"
 fi
 
+# --- Detect test command ---
+test_cmd=""
+if [ -f "$root/Gemfile.lock" ]; then
+  if [ -d "$root/spec" ]; then
+    test_cmd="bundle exec rspec"
+  elif [ -d "$root/test" ]; then
+    test_cmd="bundle exec rails test"
+  fi
+elif [ -f "$root/pnpm-lock.yaml" ]; then
+  test_cmd="pnpm test"
+elif [ -f "$root/bun.lockb" ] || [ -f "$root/bun.lock" ]; then
+  test_cmd="bun test"
+elif [ -f "$root/yarn.lock" ]; then
+  test_cmd="yarn test"
+elif [ -f "$root/package-lock.json" ]; then
+  test_cmd="npm test"
+elif [ -f "$root/poetry.lock" ] || [ -f "$root/Pipfile.lock" ]; then
+  test_cmd="pytest"
+elif [ -f "$root/requirements.txt" ] && [ -d "$root/tests" ]; then
+  test_cmd="pytest"
+elif [ -f "$root/go.sum" ]; then
+  test_cmd="go test ./..."
+elif [ -f "$root/Cargo.lock" ]; then
+  test_cmd="cargo test"
+elif [ -f "$root/mix.lock" ]; then
+  test_cmd="mix test"
+elif [ -f "$root/composer.lock" ]; then
+  if [ -f "$root/phpunit.xml" ] || [ -f "$root/phpunit.xml.dist" ]; then
+    test_cmd="./vendor/bin/phpunit"
+  elif [ -f "$root/artisan" ]; then
+    test_cmd="php artisan test"
+  fi
+fi
+
 # --- Detect dev command ---
 dev=""
 if [ -f "$root/Procfile.dev" ]; then
@@ -98,6 +131,12 @@ elif [ -x "$root/bin/dev" ]; then
   dev="bin/dev"
 elif [ -f "$root/Procfile" ]; then
   dev="foreman start"
+fi
+
+# --- Check .gitignore for .wtsetup ---
+gitignore_has_wtsetup=0
+if [ -f "$root/.gitignore" ]; then
+  grep -q '\.wtsetup' "$root/.gitignore" 2>/dev/null && gitignore_has_wtsetup=1
 fi
 
 # --- Write .wtsetup ---
@@ -135,6 +174,14 @@ fi
     echo "# install=\"\""
   fi
   echo ""
+  if [ -n "$test_cmd" ]; then
+    echo "# Run after setup to verify clean baseline (comment out to skip)"
+    echo "post_setup=\"$test_cmd\""
+  else
+    echo "# Run after setup to verify clean baseline (optional)"
+    echo "# post_setup=\"\""
+  fi
+  echo ""
   if [ -n "$dev" ]; then
     echo "# Dev command (informational — not run by wt)"
     echo "# dev=\"$dev\""
@@ -144,3 +191,8 @@ fi
 echo "Created $output"
 echo ""
 cat "$output"
+
+if [ "$gitignore_has_wtsetup" -eq 0 ]; then
+  echo ""
+  echo "⚠  .wtsetup is not in .gitignore — consider adding it."
+fi
