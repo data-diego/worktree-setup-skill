@@ -33,26 +33,26 @@ function wt --description "Create a git worktree with .wtsetup config"
     set -l copy
     set -l link
     set -l patch_keys
-    set -l install_cmd ""
+    set -l install_cmds
     set -l post_setup_cmd ""
     set -l in_copy 0
     set -l in_link 0
     set -l in_patch 0
+    set -l in_install 0
 
     for line in (cat "$main/.wtsetup")
         set -l trimmed (string trim -- "$line")
 
         if string match -q 'copy=(*' -- "$trimmed"
-            set in_copy 1; set in_link 0; set in_patch 0; continue
+            set in_copy 1; set in_link 0; set in_patch 0; set in_install 0; continue
         else if string match -q 'link=(*' -- "$trimmed"
-            set in_link 1; set in_copy 0; set in_patch 0; continue
+            set in_link 1; set in_copy 0; set in_patch 0; set in_install 0; continue
         else if string match -q 'patch_keys=(*' -- "$trimmed"
-            set in_patch 1; set in_copy 0; set in_link 0; continue
+            set in_patch 1; set in_copy 0; set in_link 0; set in_install 0; continue
+        else if string match -q 'install=(*' -- "$trimmed"
+            set in_install 1; set in_copy 0; set in_link 0; set in_patch 0; continue
         else if string match -q ')' -- "$trimmed"
-            set in_copy 0; set in_link 0; set in_patch 0; continue
-        else if string match -qr '^install="(.*)"' -- "$trimmed"
-            set install_cmd (string match -r '^install="(.*)"' -- "$trimmed")[2]
-            continue
+            set in_copy 0; set in_link 0; set in_patch 0; set in_install 0; continue
         else if string match -qr '^post_setup="(.*)"' -- "$trimmed"
             set post_setup_cmd (string match -r '^post_setup="(.*)"' -- "$trimmed")[2]
             continue
@@ -70,6 +70,8 @@ function wt --description "Create a git worktree with .wtsetup config"
             set -a link "$val"
         else if test $in_patch -eq 1
             set -a patch_keys "$val"
+        else if test $in_install -eq 1
+            set -a install_cmds "$val"
         end
     end
 
@@ -77,9 +79,12 @@ function wt --description "Create a git worktree with .wtsetup config"
     set -l slug (string replace -a '/' '-' -- "$branch")
     set slug (string replace -ra '[^a-zA-Z0-9_-]' '_' -- "$slug")
 
-    # Copy declared files
+    # Copy declared files and directories
     for f in $copy
-        if test -f "$main/$f"
+        if test -d "$main/$f"
+            cp -R "$main/$f" "$dir/$f"
+            echo "  copied $f/"
+        else if test -f "$main/$f"
             mkdir -p "$dir/"(dirname "$f")
             cp "$main/$f" "$dir/$f"
             echo "  copied $f"
@@ -110,10 +115,15 @@ function wt --description "Create a git worktree with .wtsetup config"
         end
     end
 
-    # Run install command
-    if test -n "$install_cmd"
-        echo "Running: $install_cmd"
-        (cd "$dir" && eval $install_cmd)
+    # Run install commands
+    if test (count $install_cmds) -gt 0
+        for cmd in $install_cmds
+            echo "Running: $cmd"
+            if not begin; cd "$dir" && eval $cmd; end
+                echo "  ⚠ '$cmd' failed"
+                return 1
+            end
+        end
     end
 
     # Run post-setup verification (baseline tests)

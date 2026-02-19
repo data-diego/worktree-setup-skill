@@ -26,7 +26,7 @@ wt() {
   local copy=()
   local link=()
   local patch_keys=()
-  local install=""
+  local install=()
   local post_setup=""
   source "$main/.wtsetup"
 
@@ -34,9 +34,12 @@ wt() {
   local slug="${branch//\//-}"
   slug="${slug//[^a-zA-Z0-9_-]/_}"
 
-  # Copy declared files
+  # Copy declared files and directories
   for f in "${copy[@]}"; do
-    if [ -f "$main/$f" ]; then
+    if [ -d "$main/$f" ]; then
+      cp -R "$main/$f" "$dir/$f"
+      echo "  copied $f/"
+    elif [ -f "$main/$f" ]; then
       mkdir -p "$dir/$(dirname "$f")"
       cp "$main/$f" "$dir/$f"
       echo "  copied $f"
@@ -69,10 +72,12 @@ wt() {
     fi
   done
 
-  # Run install command
-  if [ -n "$install" ]; then
-    echo "Running: $install"
-    (cd "$dir" && eval "$install")
+  # Run install commands
+  if [ ${#install[@]} -gt 0 ]; then
+    for cmd in "${install[@]}"; do
+      echo "Running: $cmd"
+      (cd "$dir" && eval "$cmd") || { echo "  ⚠ '$cmd' failed"; return 1; }
+    done
   fi
 
   # Run post-setup verification (baseline tests)
